@@ -4,8 +4,8 @@ static const int n = sizeof(arr) / sizeof(arr[0]);
 
 int main()
 {
-	int i;
+        int i;
 
-	for (i = 0; i < n; i++)
-		sum += arr[i];
+        for (i = 0; i < n; i++)
+                sum += arr[i];
 }

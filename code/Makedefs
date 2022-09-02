@@ -1,0 +1,159 @@
+SHELL=/bin/bash
+
+CC=${CROSS_COMPILE}gcc
+CXX=${CROSS_COMPILE}g++
+AS=${CROSS_COMPILE}as
+LD=${CROSS_COMPILE}ld
+NM=${CROSS_COMPILE}nm
+OBJDUMP=${CROSS_COMPILE}objdump
+OBJCOPY=${CROSS_COMPILE}objcopy
+
+CFLAGS=
+CXXFLAGS=
+
+#
+# Rule to compile object from .c file
+#
+%.o: %.c
+	@if [[ 'x${VERBOSE}' = x ]];    \
+	 then                           \
+	    echo "  CC    ${@}";        \
+	 else                           \
+	    echo ${CC} -c ${^} -o ${@}; \
+	 fi
+	@${CC} -c ${^} -o ${@}
+
+#
+# Rule to generate assembly from .c file
+#
+%.s: %.c
+	@if [[ 'x${VERBOSE}' = x ]];    \
+	 then                           \
+	    echo "  CC    ${@}";        \
+	 else                           \
+	    echo ${CC} -S ${^} -o ${@}; \
+	 fi
+	@${CC} -S ${^} -o ${@}
+
+#
+# Rule to compile object from .cpp file
+#
+%.o: %.cpp
+	@if [[ 'x${VERBOSE}' = x ]];     \
+	 then                            \
+	    echo "  CXX    ${@}";        \
+	 else                            \
+	    echo ${CXX} -c ${^} -o ${@}; \
+	 fi
+	@${CXX} -c ${^} -o ${@}
+
+#
+# Rule to generate assembly from .cpp file
+#
+%.s: %.cpp
+	@if [[ 'x${VERBOSE}' = x ]];     \
+	 then                            \
+	    echo "  CXX    ${@}";        \
+	 else                            \
+	    echo ${CXX} -S ${^} -o ${@}; \
+	 fi
+	@${CXX} -S ${^} -o ${@}
+
+#
+# Rule to compile object from .s file
+#
+%.o: %.s
+	@if [[ 'x${VERBOSE}' = x ]];  \
+	 then                         \
+	    echo "  AS    ${@}";      \
+	 else                         \
+	    echo ${AS} -o ${@} ${^};  \
+	 fi
+	@${AS} -o ${@} ${^}
+
+#
+# Rule to link objects and produce elf file
+#
+%.elf:
+	@if compgen -G "*.lds" > /dev/null;         \
+	 then                                       \
+	     pattern="*.lds";                       \
+	     files=( $${pattern} );                 \
+	     ldname="$${files[0]}";                 \
+	     LDFLAGS="${LDFLAGS} -T $${ldname}";    \
+	 else                                       \
+	     LDFLAGS="${LDFLAGS} -Ttext=0x0";       \
+	 fi;                                        \
+	 if [[ 'x${VERBOSE}' = x ]];                \
+	 then                                       \
+	     echo "  LD    ${@}";                   \
+	 else                                       \
+	     echo ${LD} $${LDFLAGS}                 \
+	      -o ${@} $(filter %.o %.a, ${^});      \
+	 fi;                                        \
+	${LD} $${LDFLAGS}                           \
+	      -o ${@} $(filter %.o %.a, ${^});
+
+#
+# Rule to link objects and produce elf file
+#
+%.bin: %.elf
+	@if [[ 'x${VERBOSE}' = x ]];             \
+	 then                                    \
+	    echo "  OBJCOPY    ${@}";            \
+	 else                                    \
+	    echo ${OBJCOPY} -O binary ${^} ${@}; \
+	 fi
+	@${OBJCOPY} -O binary ${^} ${@}
+
+#
+# Rule to output symbol table into a file
+#
+%.nmfile: %.elf
+	@if [[ 'x${VERBOSE}' = x ]];   \
+	 then                          \
+	    echo "  NM    ${@}";       \
+	 else                          \
+	    echo ${NM} -n ${^} > ${@}; \
+	 fi
+	@${NM} -n ${^} > ${@}
+
+%.nmfile: %.o
+	@if [[ 'x${VERBOSE}' = x ]];   \
+	 then                          \
+	    echo "  NM    ${@}";       \
+	 else                          \
+	    echo ${NM} -n ${^} > ${@}; \
+	 fi
+	@${NM} -n ${^} > ${@}
+
+#
+# Rule to output objectdump into a file
+#
+%.objdumb: %.elf
+	@if [[ 'x${VERBOSE}' = x ]];            \
+	 then                                   \
+	    echo "  OBJDUMP    ${@}";           \
+	 else                                   \
+	    echo ${OBJDUMP} -gsSdx ${^} > ${@}; \
+	 fi
+	@${OBJDUMP} -gsSdx ${^} > ${@}
+
+#
+# Clean everything
+#
+clean:
+	@rm -rf *.o *.elf *.nmfile *.objdumb *.bin
+
+runqemuarm_%.bin: %.bin
+	@if [[ 'x${VERBOSE}' = x ]];                                                       \
+	 then                                                                              \
+	    echo "  QEMU    ${@}";                                                         \
+	 else                                                                              \
+	    echo dd if=/dev/zero of=flash.bin bs=4096 count=4096;                          \
+	    echo dd if=${^} of=flash.bin bs=4096 conv=notrunc;                             \
+	    echo qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null; \
+	 fi
+	@dd if=/dev/zero of=flash.bin bs=4096 count=4096
+	@dd if=${^} of=flash.bin bs=4096 conv=notrunc
+	@qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null
