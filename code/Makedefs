@@ -11,6 +11,10 @@ OBJCOPY=${CROSS_COMPILE}objcopy
 CFLAGS=
 CXXFLAGS=
 
+ifdef DEBUG
+    CFLAGS+=-g
+    CXXFLAGS+=-g
+endif
 #
 # Rule to compile object from .c file
 #
@@ -58,6 +62,18 @@ CXXFLAGS=
 	    echo ${CXX} -S ${^} -o ${@}; \
 	 fi
 	@${CXX} -S ${^} -o ${@}
+
+#
+# Rule to buildw target from cpp directrly file
+#
+%: %.cpp
+	@if [[ 'x${VERBOSE}' = x ]];     \
+	 then                            \
+	    echo "  CXX    ${@}";        \
+	 else                            \
+	    echo ${CXX} -S ${^} -o ${@}; \
+	 fi
+	@${CXX} ${CXXFLAGS} ${^} -o ${@}
 
 #
 # Rule to compile object from .s file
