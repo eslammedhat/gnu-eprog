@@ -15,6 +15,7 @@ ifdef DEBUG
     CFLAGS+=-g
     CXXFLAGS+=-g
 endif
+
 #
 # Rule to compile object from .c file
 #
@@ -25,7 +26,7 @@ endif
 	 else                           \
 	    echo ${CC} -c ${^} -o ${@}; \
 	 fi
-	@${CC} -c ${^} -o ${@}
+	@${CC} -c ${^} -o ${@} &> /dev/null
 
 #
 # Rule to generate assembly from .c file
@@ -37,7 +38,20 @@ endif
 	 else                           \
 	    echo ${CC} -S ${^} -o ${@}; \
 	 fi
-	@${CC} -S ${^} -o ${@}
+	@${CC} -S ${^} -o ${@} &> /dev/null
+
+#
+# Rule to build bin directly from .c file
+#
+%: %.c
+	@if [[ 'x${VERBOSE}' = x ]];    \
+	 then                           \
+	    echo "  CC    ${@}";        \
+	 else                           \
+	    echo ${CC} -S ${^} -o ${@}; \
+	 fi
+	@${CC} ${CFLAGS} ${^} -o ${@} &> /dev/null
+
 
 #
 # Rule to compile object from .cpp file
@@ -49,7 +63,7 @@ endif
 	 else                            \
 	    echo ${CXX} -c ${^} -o ${@}; \
 	 fi
-	@${CXX} -c ${^} -o ${@}
+	@${CXX} -c ${^} -o ${@} > /dev/null
 
 #
 # Rule to generate assembly from .cpp file
@@ -61,10 +75,10 @@ endif
 	 else                            \
 	    echo ${CXX} -S ${^} -o ${@}; \
 	 fi
-	@${CXX} -S ${^} -o ${@}
+	@${CXX} -S ${^} -o ${@} &> /dev/null
 
 #
-# Rule to buildw target from cpp directrly file
+# Rule to build target from cpp directrly file
 #
 %: %.cpp
 	@if [[ 'x${VERBOSE}' = x ]];     \
@@ -73,7 +87,7 @@ endif
 	 else                            \
 	    echo ${CXX} -S ${^} -o ${@}; \
 	 fi
-	@${CXX} ${CXXFLAGS} ${^} -o ${@}
+	@${CXX} ${CXXFLAGS} ${^} -o ${@} > /dev/null
 
 #
 # Rule to compile object from .s file
@@ -85,13 +99,13 @@ endif
 	 else                         \
 	    echo ${AS} -o ${@} ${^};  \
 	 fi
-	@${AS} -o ${@} ${^}
+	@${AS} -o ${@} ${^} &> /dev/null
 
 #
 # Rule to link objects and produce elf file
 #
 %.elf:
-	@if compgen -G "*.lds" > /dev/null;         \
+	@if compgen -G "*.lds" &> /dev/null;         \
 	 then                                       \
 	     pattern="*.lds";                       \
 	     files=( $${pattern} );                 \
@@ -108,7 +122,7 @@ endif
 	      -o ${@} $(filter %.o %.a, ${^});      \
 	 fi;                                        \
 	${LD} $${LDFLAGS}                           \
-	      -o ${@} $(filter %.o %.a, ${^});
+	      -o ${@} $(filter %.o %.a, ${^})  &> /dev/null;
 
 #
 # Rule to link objects and produce elf file
@@ -120,7 +134,7 @@ endif
 	 else                                    \
 	    echo ${OBJCOPY} -O binary ${^} ${@}; \
 	 fi
-	@${OBJCOPY} -O binary ${^} ${@}
+	@${OBJCOPY} -O binary ${^} ${@} &> /dev/null
 
 #
 # Rule to output symbol table into a file
@@ -146,7 +160,16 @@ endif
 #
 # Rule to output objectdump into a file
 #
-%.objdumb: %.elf
+%.objdump: %.elf
+	@if [[ 'x${VERBOSE}' = x ]];            \
+	 then                                   \
+	    echo "  OBJDUMP    ${@}";           \
+	 else                                   \
+	    echo ${OBJDUMP} -gsSdx ${^} > ${@}; \
+	 fi
+	@${OBJDUMP} -gsSdx ${^} > ${@}
+
+%.objdump: %.o
 	@if [[ 'x${VERBOSE}' = x ]];            \
 	 then                                   \
 	    echo "  OBJDUMP    ${@}";           \
@@ -159,7 +182,7 @@ endif
 # Clean everything
 #
 clean:
-	@rm -rf *.o *.elf *.nmfile *.objdumb *.bin
+	@rm -rf *.o *.elf *.nmfile *.objdump *.bin
 
 runqemuarm_%.bin: %.bin
 	@if [[ 'x${VERBOSE}' = x ]];                                                       \

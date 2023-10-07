@@ -1,4 +1,5 @@
-        .text
+        .text                @ assembler directive to tell the assembler
+                             @ the following will be in the text section.
 start:                       @ Label, not really required
         mov   r0, #5         @ Load register r0 with the value 5
         mov   r1, #4         @ Load register r1 with the value 4
