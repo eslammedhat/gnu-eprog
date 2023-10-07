@@ -184,15 +184,25 @@ endif
 clean:
 	@rm -rf *.o *.elf *.nmfile *.objdump *.bin
 
+#
+# run qemu
+#   - this will create flash file for the connex machine
+#   - then launch qmu-system for connex board
+#
 runqemuarm_%.bin: %.bin
-	@if [[ 'x${VERBOSE}' = x ]];                                                       \
-	 then                                                                              \
-	    echo "  QEMU    ${@}";                                                         \
-	 else                                                                              \
-	    echo dd if=/dev/zero of=flash.bin bs=4096 count=4096;                          \
-	    echo dd if=${^} of=flash.bin bs=4096 conv=notrunc;                             \
-	    echo qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null; \
+	@if [[ 'x${VERBOSE}' = x ]];                                                                \
+	 then                                                                                       \
+	    echo "  QEMU    ${@}";                                                                  \
+	 else                                                                                       \
+	    echo dd if=/dev/zero of=flash.bin bs=4096 count=4096;                                   \
+	    echo dd if=${^} of=flash.bin bs=4096 conv=notrunc;                                      \
+	    echo qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null;          \
 	 fi
 	@dd if=/dev/zero of=flash.bin bs=4096 count=4096
 	@dd if=${^} of=flash.bin bs=4096 conv=notrunc
-	@qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null
+	@if [[ 'x${DEBUG}' = x ]];                                                                  \
+	 then                                                                                       \
+	    qemu-system-arm -M connex -pflash flash.bin -nographic -serial /dev/null;               \
+	 else                                                                                       \
+	    qemu-system-arm -M connex -pflash flash.bin -s -S -nographic -serial /dev/null;         \
+	 fi;
